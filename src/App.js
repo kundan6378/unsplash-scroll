@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import axios from 'axios';
 import './App.css';
 
@@ -11,44 +11,39 @@ function App() {
   const observer = useRef(); // This will hold a reference to the IntersectionObserver instance
 
   // Function to fetch more photos from the Unsplash API
-  const loadMorePhotos = () => {
+  const loadMorePhotos = useCallback(() => {
     setLoading(true); // Set loading to true to show the loading message
     axios
       .get(`https://api.unsplash.com/photos?page=${page}&client_id=vPiTYe1heLAmufKHCO2ddTsXVQ2r_QrzFMOERAYWCCA`) // API call to fetch photos
-      .then(response => {
-        setPhotos(prevPhotos => [...prevPhotos, ...response.data]); // Add new photos to the existing list
-        setPage(prevPage => prevPage + 1); // Increase the page number for next request
+      .then((response) => {
+        setPhotos((prevPhotos) => [...prevPhotos, ...response.data]); // Add new photos to the existing list
+        setPage((prevPage) => prevPage + 1); // Increase the page number for the next request
         setLoading(false); // Set loading to false once photos are fetched
       })
-      .catch(err => {
+      .catch((err) => {
         setError('Failed to load images'); // Set error if the API request fails
         setLoading(false); // Stop loading even if there's an error
       });
-  };
+  }, [page]); // Ensure `page` is included as a dependency since it changes over time
 
-  // This effect runs once when the component is mounted (empty dependency array means it runs only once)
+  // Use `useEffect` to call `loadMorePhotos` on component mount
   useEffect(() => {
     loadMorePhotos(); // Load photos when the component is mounted
-  }, []);
+  }, [loadMorePhotos]); // Now includes `loadMorePhotos` as a dependency
 
   // Function to handle the IntersectionObserver logic
   const lastPhotoElementRef = (node) => {
-    // If photos are currently being loaded, don't do anything.
-    if (loading) return;
+    if (loading) return; // If photos are currently being loaded, don't do anything
 
-    // If there is already an observer, disconnect it to avoid multiple observers.
-    if (observer.current) observer.current.disconnect();
+    if (observer.current) observer.current.disconnect(); // If there is already an observer, disconnect it to avoid multiple observers
 
-    // Create a new IntersectionObserver to watch the "last photo" when it comes into view
     observer.current = new IntersectionObserver((entries) => {
-      // If the observed element (last photo) is visible, load more photos
       if (entries[0].isIntersecting) {
-        loadMorePhotos();
+        loadMorePhotos(); // If the observed element (last photo) is visible, load more photos
       }
     });
 
-    // Start observing the "last photo" if the node exists
-    if (node) observer.current.observe(node);
+    if (node) observer.current.observe(node); // Start observing the "last photo" if the node exists
   };
 
   return (
